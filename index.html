@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <title>JSON Array Comparison</title>
+  <style>
+    body {
+      padding: 20px;
+    }
+
+    .form-control {
+      resize: vertical;
+      height: 20vh;
+    }
+
+    .scrollable-table {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 class="text-center">JSON Array Comparison</h1>
+    <p class="lead text-center">Compare JSON arrays based on IDs or a specified field</p>
+
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="form-group">
+          <label for="firstArray">First JSON Array</label>
+          <textarea class="form-control" id="firstArray" rows="6"></textarea>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="form-group">
+          <label for="secondArray">Second JSON Array</label>
+          <textarea class="form-control" id="secondArray" rows="6"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col text-center">
+        <button class="btn btn-primary" onclick="compareArrays()">Compare</button>
+      </div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col">
+        <div id="result" class="scrollable-table">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Field Name</th>
+                <th scope="col">Value 1</th>
+                <th scope="col">Value 2</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    function compareArrays() {
+      delete changes;
+      delete result;
+
+      document.getElementById('resultBody').innerHTML = '';
+
+
+      var firstArray = JSON.parse(document.getElementById('firstArray').value);
+      var secondArray = JSON.parse(document.getElementById('secondArray').value);
+
+      const toMap = new Map(secondArray.map(obj => [obj.id, obj]));
+      var changes = [];
+
+
+      firstArray.forEach(obj1 => {
+        const obj2 = toMap.get(obj1.id);
+        if (obj2) {
+          var result = compareJSONObjects(obj1, obj2);
+          if(result.length > 0){
+              changes.push(result);
+          }
+          console.log(changes);
+        }
+      });
+
+      var prevId = null; // Keep track of the previous ID
+
+      for(var j=0;j<changes.length;j++){
+        for (var i = 0; i < changes[j].length; i++) {
+          var change = changes[j][i];
+          var row = document.createElement('tr');
+
+          if (change.id !== prevId) {
+              var idHeaderRow = document.createElement('tr');
+              var idHeaderCell = document.createElement('td');
+              idHeaderCell.setAttribute('colspan', '4');
+              idHeaderCell.textContent = 'ID: ' + change.id;
+              idHeaderRow.appendChild(idHeaderCell);
+              resultBody.appendChild(idHeaderRow);
+
+              prevId = change.id;
+          }
+
+          var idCell = document.createElement('td');
+          idCell.textContent = i + 1;
+          row.appendChild(idCell);
+
+          var fieldNameCell = document.createElement('td');
+          fieldNameCell.textContent = change.field;
+          row.appendChild(fieldNameCell);
+
+          var value1Cell = document.createElement('td');
+          value1Cell.textContent = change.value1;
+          row.appendChild(value1Cell);
+
+          var value2Cell = document.createElement('td');
+          value2Cell.textContent = change.value2;
+          row.appendChild(value2Cell);
+
+          resultBody.appendChild(row);
+        }
+      }
+
+      firstArray.forEach(obj1 => {
+        const obj2 = toMap.get(obj1.id);
+        if (!obj2) {
+          var idHeaderRow = document.createElement('tr');
+              var idHeaderCell = document.createElement('td');
+              idHeaderCell.setAttribute('colspan', '4');
+              idHeaderCell.textContent = 'ID: ' + obj1.id +' not found in second Array';
+              idHeaderRow.appendChild(idHeaderCell);
+              resultBody.appendChild(idHeaderRow);
+        }
+      });
+
+      const toFirstMap = new Map(firstArray.map(obj => [obj.id, obj]));
+      secondArray.forEach(obj1 => {
+        const obj2 = toFirstMap.get(obj1.id);
+        if (!obj2) {
+          var idHeaderRow = document.createElement('tr');
+              var idHeaderCell = document.createElement('td');
+              idHeaderCell.setAttribute('colspan', '4');
+              idHeaderCell.textContent = 'ID: ' + obj1.id +' not found in first Array';
+              idHeaderRow.appendChild(idHeaderCell);
+              resultBody.appendChild(idHeaderRow);
+        }
+      });
+
+    }
+
+
+
+    function compareJSONObjects(obj1, obj2) {
+        var report = [];
+
+        function compareObjects(obj1, obj2,belongingId,path = '') {
+            for (var key in obj1) {
+            if (obj1.hasOwnProperty(key)) {
+                var value1 = obj1[key];
+                var value2 = obj2[key];
+                var currentPath = (path === '') ? key : path + '.' + key;
+
+                if (typeof value1 === 'object' && typeof value2 === 'object') {
+                compareObjects(value1, value2, belongingId,currentPath);
+                } else if (value1 !== value2) {
+                var difference = {
+                    field: currentPath,
+                    value1: value1,
+                    value2: value2,
+                    id: belongingId
+                };
+                report.push(difference);
+                }
+            }
+            }
+        }
+
+        compareObjects(obj1, obj2,obj1.id);
+
+        return report;
+    }
+
+  </script>
+
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
+
+
+
